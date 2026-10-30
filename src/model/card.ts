@@ -96,6 +96,11 @@ export function cloneCard(card: Card): Card {
   return { ...card, symbols: card.symbols.map((s) => ({ ...s })) };
 }
 
+/** Formats the printed card number: "21/185" when the set size is known, otherwise "021". */
+export function formatCollectorNumber(n: number, setSize: number): string {
+  return setSize > 0 ? `${n}/${setSize}` : formatNumber(n);
+}
+
 /** Formats the card number as three digits, e.g. 7 becomes "007". */
 export function formatNumber(n: number): string {
   return String(n).padStart(3, "0");

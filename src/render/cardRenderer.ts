@@ -5,7 +5,7 @@
 // speed, damage and check stacked on the right edge of the text box, symbols bottom left,
 // collector line bottom right. Characters are full art with hand size and health beside the name.
 
-import { formatNumber, type Card, type CardSymbol } from "../model/card";
+import { formatCollectorNumber, type Card, type CardSymbol } from "../model/card";
 import { getCardType, getZone, typeShowsStat, ZONES } from "../model/cardTypes";
 import { getSymbol } from "../model/symbols";
 import { draw as drawRichText, fit as fitRichText, type Box } from "./richText";
@@ -44,6 +44,8 @@ const KEYWORD_H = 38;
 export interface DrawOptions {
   artImage?: HTMLImageElement | null;
   setCode?: string;
+  /** Cards in the set; when above 0 the number prints as 21/185. */
+  setSize?: number;
 }
 
 /** Returns the art window for a card: full art for characters, the top of the card otherwise. */
@@ -419,11 +421,11 @@ function drawSymbols(ctx: CanvasRenderingContext2D, symbols: CardSymbol[], maxWi
 }
 
 /** Draws the collector line (type, rarity, set code, number) and the artist credit, bottom right. */
-function drawFooter(ctx: CanvasRenderingContext2D, card: Card, typeName: string, setCode: string): void {
+function drawFooter(ctx: CanvasRenderingContext2D, card: Card, typeName: string, setCode: string, setSize: number): void {
   const right = CARD_WIDTH - 40;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  const collector = [typeName, card.rarity, setCode, formatNumber(card.number)].filter(Boolean).join("  ");
+  const collector = [typeName, card.rarity, setCode, formatCollectorNumber(card.number, setSize)].filter(Boolean).join("  ");
   ctx.fillStyle = "rgba(255,255,255,0.88)";
   fitFont(ctx, collector, "600", 22, 14, 380);
   ctx.fillText(collector, right, 984);
@@ -488,6 +490,6 @@ export function drawCard(ctx: CanvasRenderingContext2D, card: Card, options: Dra
   if (Boolean(blockModifier) || blockZone !== "none") drawShield(ctx, blockModifier, blockZone);
 
   drawSymbols(ctx, card.symbols, 280);
-  drawFooter(ctx, card, typeDef.name, options.setCode ?? "");
+  drawFooter(ctx, card, typeDef.name, options.setCode ?? "", options.setSize ?? 0);
   ctx.restore();
 }

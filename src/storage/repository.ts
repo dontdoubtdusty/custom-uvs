@@ -1,7 +1,7 @@
 // Reads and writes sets, cards and art. The only place that knows the store names.
 
 import { normalizeCard, type Card } from "../model/card";
-import type { CardSet } from "../model/set";
+import { normalizeSet, type CardSet } from "../model/set";
 import { newId } from "../model/ids";
 import { openStorage, type StorageBackend, type StorageMode } from "./backends";
 
@@ -26,7 +26,7 @@ export class Repository {
   /** Returns all sets, oldest first. */
   async getSets(): Promise<CardSet[]> {
     const sets = await this.db.getAll<CardSet>("sets");
-    return sets.sort((a, b) => a.createdAt - b.createdAt);
+    return sets.map(normalizeSet).sort((a, b) => a.createdAt - b.createdAt);
   }
 
   /** Saves a set (insert or update). */

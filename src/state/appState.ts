@@ -2,7 +2,7 @@
 // they never touch storage directly. Listeners are told after each change.
 
 import { cloneCard, createCard, type Card } from "../model/card";
-import { cleanCode, createSet, type CardSet } from "../model/set";
+import { cleanCode, cleanSize, createSet, type CardSet } from "../model/set";
 import type { SymbolId } from "../model/symbols";
 import { newId } from "../model/ids";
 import type { StorageMode } from "../storage/backends";
@@ -136,12 +136,13 @@ export class AppState {
     } catch (err) { this.fail("Could not create the set.", err); }
   }
 
-  /** Changes the selected set's name or code; blank values keep the old ones. */
-  async updateSet(patch: { name?: string; code?: string }): Promise<void> {
+  /** Changes the selected set's name, code or size; a blank name or code keeps the old one. */
+  async updateSet(patch: { name?: string; code?: string; size?: string }): Promise<void> {
     const set = this.currentSet();
     if (!set) return;
     if (patch.name !== undefined) set.name = patch.name.trim() || set.name;
     if (patch.code !== undefined) set.code = cleanCode(patch.code) || set.code;
+    if (patch.size !== undefined) set.size = cleanSize(patch.size);
     set.updatedAt = Date.now();
     this.emit();
     try {

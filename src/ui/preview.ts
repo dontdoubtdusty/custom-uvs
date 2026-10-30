@@ -52,7 +52,8 @@ export class Preview {
     const card = this.app.currentCard();
     const shown = card ?? sampleCard();
     const art = card ? this.app.getArtImage(card.artId) : null;
-    drawCard(this.ctx, shown, { artImage: art, setCode: this.app.currentSet()?.code ?? "MYS" });
+    const set = this.app.currentSet();
+    drawCard(this.ctx, shown, { artImage: art, setCode: set?.code ?? "MYS", setSize: set?.size ?? 0 });
     const canPan = Boolean(art);
     this.hint.hidden = !canPan;
     this.canvas.classList.toggle("can-pan", canPan);

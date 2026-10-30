@@ -25,6 +25,11 @@ export class Sidebar {
     qs<HTMLInputElement>("#set-code", root).addEventListener("change", (e) => {
       void app.updateSet({ code: (e.target as HTMLInputElement).value });
     });
+    qs<HTMLInputElement>("#set-size", root).addEventListener("change", (e) => {
+      const input = e.target as HTMLInputElement;
+      void app.updateSet({ size: input.value });
+      input.value = this.app.currentSet()?.size ? String(this.app.currentSet()?.size) : "";
+    });
     qs<HTMLFormElement>("#new-set-form", root).addEventListener("submit", (e) => {
       e.preventDefault();
       const name = qs<HTMLInputElement>("#new-set-name", root).value;
@@ -59,6 +64,9 @@ export class Sidebar {
             <input id="set-name" class="input" maxlength="60"></div>
           <div class="field"><label class="field-label" for="set-code">Code</label>
             <input id="set-code" class="input input-code" maxlength="5"></div>
+          <div class="field"><label class="field-label" for="set-size">Cards in set</label>
+            <input id="set-size" class="input input-code" type="number" min="0" max="999" inputmode="numeric" placeholder="Not printed"></div>
+          <p class="hint">Fill this in to print numbers as 21/185.</p>
           <button type="button" class="button button-danger" data-action="delete-set">${icon("trash")}Delete set</button>
         </details>
       </div>
@@ -124,6 +132,7 @@ export class Sidebar {
     if (set) {
       setValueIfIdle(qs<HTMLInputElement>("#set-name", this.root), set.name);
       setValueIfIdle(qs<HTMLInputElement>("#set-code", this.root), set.code);
+      setValueIfIdle(qs<HTMLInputElement>("#set-size", this.root), set.size ? String(set.size) : "");
     }
     this.renderCardList(state, set);
   }

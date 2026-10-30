@@ -39,5 +39,10 @@ export const MIGRATIONS: readonly Migration[] = [
   {
     description: "Add empty flavor text to existing cards",
     upgrade: (_db, tx) => backfill(tx, "cards", "flavor", "")
+  },
+  // Version 3: sets get a size, printed as 21/185. 0 means not printed.
+  {
+    description: "Add set size 0 to existing sets",
+    upgrade: (_db, tx) => backfill(tx, "sets", "size", 0)
   }
 ];
