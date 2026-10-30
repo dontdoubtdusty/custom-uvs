@@ -1,7 +1,9 @@
 // Draws a card onto a canvas from card data. Pure drawing: reads data, changes nothing.
 // All coordinates are card pixels: 750 x 1050, which is 2.5 x 3.5 inches at 300 dpi.
 // The frame is an original design that places information where UniVersus players expect it:
-// difficulty top left, block shield top right, check value bottom right, attack zone on the right edge.
+// difficulty top left, block shield top right, name tab over the bottom of the art,
+// speed, damage and check stacked on the right edge of the text box, symbols bottom left,
+// collector line bottom right. Characters are full art with hand size and health beside the name.
 
 import { formatNumber, type Card, type CardSymbol } from "../model/card";
 import { getCardType, getZone, typeShowsStat, ZONES } from "../model/cardTypes";
@@ -14,19 +16,39 @@ export const CARD_HEIGHT = 1050;
 const DISPLAY = '"Barlow Condensed", "Arial Narrow", "Roboto Condensed", Arial, sans-serif';
 const BODY = 'Barlow, "Segoe UI", Arial, sans-serif';
 const INK = "#16181C";
+const STRIP = "#2B2F36";
 const PAPER = "#F6F4EF";
 const RED = "#C8392E";
 const GREEN = "#2F9157";
 
-/** Fixed regions of the frame. */
-export const ART_RECT: Box = { x: 44, y: 128, w: 662, h: 432 };
-const TYPE_LINE: Box = { x: 44, y: 572, w: 662, h: 54 };
-const TEXT_BOX: Box = { x: 44, y: 636, w: 662, h: 250 };
-const BAND_Y = 944;
+/** Width of the dark border around the card. */
+const EDGE = 18;
+/** Top of the footer band, where the text box (or character text panel) ends. */
+const FOOTER_TOP = 962;
+/** Center line of the right-hand stat column. */
+const COLUMN_X = 662;
+/** Text stops here when the right-hand column or check value is printed. */
+const COLUMN_LEFT = 600;
+
+/** Art window for form cards (everything except characters). */
+const FORM_ART: Box = { x: EDGE, y: EDGE, w: CARD_WIDTH - EDGE * 2, h: 630 };
+/** Art window for characters: the whole card above the footer. */
+const CHARACTER_ART: Box = { x: EDGE, y: EDGE, w: CARD_WIDTH - EDGE * 2, h: FOOTER_TOP - EDGE };
+
+/** Top of the name tab for each layout. */
+const FORM_NAME_Y = 596;
+const CHARACTER_NAME_Y = 532;
+const NAME_H = 64;
+const KEYWORD_H = 38;
 
 export interface DrawOptions {
   artImage?: HTMLImageElement | null;
   setCode?: string;
+}
+
+/** Returns the art window for a card: full art for characters, the top of the card otherwise. */
+export function artRectFor(card: Pick<Card, "type">): Box {
+  return card.type === "character" ? CHARACTER_ART : FORM_ART;
 }
 
 /** Returns a stat's trimmed value when the card's type shows it, otherwise "". */
@@ -36,17 +58,17 @@ function stat(card: Card, key: keyof Card): string {
 }
 
 /** Traces a rounded rectangle path (does not fill or stroke). */
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number | number[]): void {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
 }
 
-/** Mixes a hex color toward black (negative amount) or white (positive amount). */
-function shade(hex: string, amount: number): string {
+/** Mixes a hex color toward black (negative amount) or white (positive amount), with optional alpha. */
+function shade(hex: string, amount: number, alpha = 1): string {
   const n = parseInt(hex.slice(1), 16);
   const target = amount < 0 ? 0 : 255;
   const mix = (c: number) => Math.round(c + (target - c) * Math.abs(amount));
-  return `rgb(${mix((n >> 16) & 255)},${mix((n >> 8) & 255)},${mix(n & 255)})`;
+  return `rgba(${mix((n >> 16) & 255)},${mix((n >> 8) & 255)},${mix(n & 255)},${alpha})`;
 }
 
 /** Sets the font, shrinking from maxSize until the text fits maxWidth. Returns the size used. */
@@ -100,7 +122,7 @@ export function drawSymbol(ctx: CanvasRenderingContext2D, symbolId: string, cx: 
 
 /** Position and size of the art for a card's pan and zoom, clamped so the art always covers the window. */
 export function artPlacement(img: HTMLImageElement, card: Card) {
-  const a = ART_RECT;
+  const a = artRectFor(card);
   const zoom = Math.max(1, card.artZoom || 1);
   const scale = Math.max(a.w / img.naturalWidth, a.h / img.naturalHeight) * zoom;
   const w = img.naturalWidth * scale;
@@ -112,28 +134,18 @@ export function artPlacement(img: HTMLImageElement, card: Card) {
   return { x: a.x + (a.w - w) / 2 + panX, y: a.y + (a.h - h) / 2 + panY, w, h, panX, panY };
 }
 
-/** Draws the outer border and the dark frame with a thin type-colored inner line. */
-function drawFrame(ctx: CanvasRenderingContext2D, color: string): void {
+/** Draws the dark card body that shows as the border and footer band. */
+function drawFrame(ctx: CanvasRenderingContext2D): void {
   roundRect(ctx, 0, 0, CARD_WIDTH, CARD_HEIGHT, 38);
   ctx.fillStyle = INK;
   ctx.fill();
-  const grad = ctx.createLinearGradient(0, 22, 0, CARD_HEIGHT - 22);
-  grad.addColorStop(0, "#353A42");
-  grad.addColorStop(1, "#1F2228");
-  roundRect(ctx, 22, 22, CARD_WIDTH - 44, CARD_HEIGHT - 44, 24);
-  ctx.fillStyle = grad;
-  ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = color;
-  roundRect(ctx, 30, 30, CARD_WIDTH - 60, CARD_HEIGHT - 60, 18);
-  ctx.stroke();
 }
 
 /** Draws the art window: the image if there is one, otherwise a quiet placeholder. */
 function drawArt(ctx: CanvasRenderingContext2D, card: Card, img: HTMLImageElement | null, color: string): void {
-  const a = ART_RECT;
+  const a = artRectFor(card);
   ctx.save();
-  roundRect(ctx, a.x, a.y, a.w, a.h, 12);
+  roundRect(ctx, a.x, a.y, a.w, a.h, [24, 24, 0, 0]);
   ctx.clip();
   if (img) {
     const p = artPlacement(img, card);
@@ -150,7 +162,7 @@ function drawArt(ctx: CanvasRenderingContext2D, card: Card, img: HTMLImageElemen
       ctx.stroke();
     }
     // A simple mountain-and-sun mark so an empty window reads as "art goes here".
-    const cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+    const cx = a.x + a.w / 2, cy = a.y + Math.min(a.h, 630) / 2;
     ctx.strokeStyle = "rgba(255,255,255,0.35)";
     ctx.lineWidth = 8;
     ctx.lineJoin = "round";
@@ -167,27 +179,23 @@ function drawArt(ctx: CanvasRenderingContext2D, card: Card, img: HTMLImageElemen
     ctx.stroke();
   }
   ctx.restore();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = INK;
-  roundRect(ctx, a.x, a.y, a.w, a.h, 12);
-  ctx.stroke();
 }
 
 /** Draws the difficulty disc in the top-left corner. */
 function drawDifficulty(ctx: CanvasRenderingContext2D, value: string): void {
   ctx.beginPath();
-  ctx.arc(96, 92, 56, 0, Math.PI * 2);
+  ctx.arc(92, 92, 56, 0, Math.PI * 2);
   ctx.fillStyle = PAPER;
   ctx.fill();
   ctx.lineWidth = 7;
   ctx.strokeStyle = INK;
   ctx.stroke();
-  centerText(ctx, value, 96, 92, 72, 90, INK);
+  centerText(ctx, value, 92, 92, 72, 90, INK);
 }
 
 /** Draws the block shield in the top-right corner, with zone tabs on its right edge. */
 function drawShield(ctx: CanvasRenderingContext2D, modifier: string, zoneId: string): void {
-  const x = 618, y = 36, w = 82, h = 108;
+  const x = 618, y = 34, w = 82, h = 108;
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(x + w, y);
@@ -209,127 +217,127 @@ function drawShield(ctx: CanvasRenderingContext2D, modifier: string, zoneId: str
     const ty = y + 8 + i * 30;
     roundRect(ctx, x + w + 4, ty, 14, 24, 4);
     const active = zone.id === zoneId;
-    ctx.fillStyle = active ? zone.color : "rgba(255,255,255,0.24)";
+    ctx.fillStyle = active ? zone.color : "rgba(22,24,28,0.55)";
     ctx.fill();
-    if (active) {
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = INK;
-      ctx.stroke();
-    }
-  });
-}
-
-/** Draws the name bar between the corner badges. */
-function drawName(ctx: CanvasRenderingContext2D, card: Card, left: number, right: number): void {
-  roundRect(ctx, left, 44, right - left, 70, 14);
-  ctx.fillStyle = "rgba(255,255,255,0.08)";
-  ctx.fill();
-  const name = card.name.trim() || "Untitled";
-  ctx.fillStyle = "#FFFFFF";
-  ctx.textBaseline = "middle";
-  fitFont(ctx, name, "700", 52, 22, right - left - 40);
-  ctx.fillText(name, left + 20, 81);
-}
-
-/** Draws the attack zone dial on the right edge: three arrows, the attack's zone highlighted. */
-function drawAttackZone(ctx: CanvasRenderingContext2D, zoneId: string): void {
-  const cx = 682, cy = 500, r = 44;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = INK;
-  ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = PAPER;
-  ctx.stroke();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ZONES.forEach((zone, i) => {
-    const ay = cy - 22 + i * 22;
-    const active = zone.id === zoneId;
-    ctx.strokeStyle = active ? zone.color : "rgba(255,255,255,0.28)";
-    ctx.lineWidth = active ? 8 : 5;
-    ctx.beginPath();
-    ctx.moveTo(cx - 20, ay);
-    ctx.lineTo(cx + 14, ay);
-    ctx.moveTo(cx + 4, ay - 8);
-    ctx.lineTo(cx + 14, ay);
-    ctx.lineTo(cx + 4, ay + 8);
+    ctx.lineWidth = active ? 3 : 2;
+    ctx.strokeStyle = active ? INK : "rgba(255,255,255,0.5)";
     ctx.stroke();
   });
-  ctx.lineCap = "butt";
 }
 
-/** Draws the type line: type name, keywords joined with dots, and a character's version. */
-function drawTypeLine(ctx: CanvasRenderingContext2D, card: Card, typeName: string, color: string): void {
-  const b = TYPE_LINE;
-  roundRect(ctx, b.x, b.y, b.w, b.h, 10);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = INK;
-  ctx.stroke();
+/** Traces a bar that starts at the card's left edge and ends in a slanted cut. */
+function slantedBar(ctx: CanvasRenderingContext2D, y: number, w: number, h: number): void {
+  const slant = h * 0.4;
+  ctx.beginPath();
+  ctx.moveTo(EDGE, y);
+  ctx.lineTo(EDGE + w + slant, y);
+  ctx.lineTo(EDGE + w, y + h);
+  ctx.lineTo(EDGE, y + h);
+  ctx.closePath();
+}
 
-  ctx.textBaseline = "middle";
-  const cy = b.y + b.h / 2 + 1;
-  let right = b.x + b.w - 18;
-  const version = stat(card, "version");
-  if (version) {
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = `700 30px ${DISPLAY}`;
-    ctx.textAlign = "right";
-    ctx.fillText(version, right, cy);
-    right -= ctx.measureText(version).width + 16;
-    ctx.textAlign = "left";
-  }
-
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = `700 34px ${DISPLAY}`;
-  ctx.fillText(typeName, b.x + 18, cy);
+/** Joins keywords with dots and adds the character version, as printed in the keyword strip. */
+function keywordStripText(card: Card): string {
   const keywords = card.keywords.split(",").map((k) => k.trim()).filter(Boolean).join("  •  ");
-  if (keywords) {
-    const kx = b.x + 18 + ctx.measureText(typeName).width + 20;
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    fitFont(ctx, keywords, "italic 500", 30, 14, right - kx);
-    ctx.fillText(keywords, kx, cy);
-  }
+  const version = stat(card, "version");
+  return [keywords.toUpperCase(), version ? "Version " + version : ""].filter(Boolean).join("     ");
 }
 
-/** Draws the effect text box, tinted with the type color, with wrapped rich text. */
-function drawTextBox(ctx: CanvasRenderingContext2D, card: Card, color: string): void {
-  const b = TEXT_BOX;
-  roundRect(ctx, b.x, b.y, b.w, b.h, 14);
-  ctx.fillStyle = shade(color, 0.84);
+/** Returns where the name block ends: below the keyword strip if there is one. */
+function nameBlockBottom(card: Card, top: number): number {
+  return top + NAME_H + (keywordStripText(card) ? KEYWORD_H : 0);
+}
+
+/**
+ * Draws the name tab over the bottom of the art and, if there are keywords or a version,
+ * the keyword strip below it. Returns the bottom of the lowest bar drawn.
+ */
+function drawNameBlock(ctx: CanvasRenderingContext2D, card: Card, top: number, maxWidth: number, color: string): number {
+  const name = card.name.trim() || "Untitled";
+  ctx.textBaseline = "middle";
+  fitFont(ctx, name, "700", 48, 22, maxWidth - 60);
+  const nameWidth = Math.min(maxWidth, ctx.measureText(name).width + 60);
+  slantedBar(ctx, top, nameWidth, NAME_H);
+  ctx.fillStyle = INK;
   ctx.fill();
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = INK;
-  ctx.stroke();
-  const inner: Box = { x: b.x + 24, y: b.y + 18, w: b.w - 48, h: b.h - 36 };
+  // A type-colored stripe on the tab's leading edge ties the name to the card type.
+  ctx.fillStyle = color;
+  ctx.fillRect(EDGE, top, 12, NAME_H);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillText(name, EDGE + 30, top + NAME_H / 2 + 2);
+
+  const strip = keywordStripText(card);
+  if (!strip) return top + NAME_H;
+
+  const y = top + NAME_H;
+  fitFont(ctx, strip, "italic 600", 26, 14, maxWidth - 70);
+  const stripWidth = Math.min(maxWidth - 20, ctx.measureText(strip).width + 56);
+  slantedBar(ctx, y, stripWidth, KEYWORD_H);
+  ctx.fillStyle = STRIP;
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  ctx.fillText(strip, EDGE + 30, y + KEYWORD_H / 2 + 1);
+  return y + KEYWORD_H;
+}
+
+/** Draws the type-tinted text box below the art (form cards). */
+function drawTextBox(ctx: CanvasRenderingContext2D, color: string): void {
+  const top = FORM_ART.y + FORM_ART.h;
+  ctx.fillStyle = shade(color, 0.8);
+  ctx.fillRect(EDGE, top, CARD_WIDTH - EDGE * 2, FOOTER_TOP - top);
+  ctx.fillStyle = color;
+  ctx.fillRect(EDGE, top, CARD_WIDTH - EDGE * 2, 6);
+}
+
+/** Draws the see-through text panel over a character's art. */
+function drawCharacterPanel(ctx: CanvasRenderingContext2D, top: number, color: string): void {
+  const grad = ctx.createLinearGradient(0, top - 40, 0, top + 30);
+  grad.addColorStop(0, shade(color, 0.88, 0));
+  grad.addColorStop(1, shade(color, 0.88, 0.9));
+  ctx.fillStyle = grad;
+  ctx.fillRect(EDGE, top - 40, CARD_WIDTH - EDGE * 2, FOOTER_TOP - top + 40);
+}
+
+/** Lays out and draws the effect text inside the given box. */
+function drawEffectText(ctx: CanvasRenderingContext2D, card: Card, inner: Box): void {
   const fitted = fitRichText(ctx, card.text, inner, BODY, 32, 18);
   drawRichText(ctx, fitted, inner, BODY, "#1C2026", (c, id, cx, cy, r) => drawSymbol(c, id, cx, cy, r));
 }
 
-/** Draws a labelled stat pill (used for speed). Returns its right edge. */
-function drawSpeed(ctx: CanvasRenderingContext2D, x: number, value: string): number {
-  const w = 108, h = 80, y = BAND_Y - h / 2;
-  roundRect(ctx, x, y, w, h, 14);
-  ctx.fillStyle = PAPER;
+/** Draws speed in a circle with an arrow whose angle and color show the attack zone. */
+function drawSpeed(ctx: CanvasRenderingContext2D, cx: number, cy: number, value: string, zoneId: string): void {
+  const r = 42;
+  const zoneIndex = Math.max(0, ZONES.findIndex((z) => z.id === zoneId));
+  const zone = ZONES[zoneIndex];
+  // High points up and right, mid straight right, low down and right.
+  const angle = (zoneIndex - 1) * (Math.PI / 5);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.beginPath();
+  ctx.moveTo(r - 6, -20);
+  ctx.lineTo(r + 22, 0);
+  ctx.lineTo(r - 6, 20);
+  ctx.closePath();
+  ctx.fillStyle = zone.color;
   ctx.fill();
   ctx.lineWidth = 4;
   ctx.strokeStyle = INK;
   ctx.stroke();
-  ctx.fillStyle = "#4C535D";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.font = `600 20px ${DISPLAY}`;
-  ctx.fillText("Speed", x + w / 2, y + 24);
-  ctx.textAlign = "left";
-  centerText(ctx, value, x + w / 2, y + 52, 42, w - 16, INK);
-  return x + w;
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = PAPER;
+  ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = INK;
+  ctx.stroke();
+  centerText(ctx, value, cx, cy, 46, r * 1.5, INK);
 }
 
-/** Draws damage inside a burst. Returns its right edge. */
-function drawDamage(ctx: CanvasRenderingContext2D, left: number, value: string): number {
-  const r = 46, cx = left + r, cy = BAND_Y;
+/** Draws damage inside a burst centered on (cx, cy). */
+function drawDamage(ctx: CanvasRenderingContext2D, cx: number, cy: number, value: string): void {
+  const r = 48;
   ctx.beginPath();
   for (let i = 0; i < 24; i++) {
     const angle = (Math.PI * 2 * i) / 24 - Math.PI / 2;
@@ -342,13 +350,12 @@ function drawDamage(ctx: CanvasRenderingContext2D, left: number, value: string):
   ctx.lineWidth = 4;
   ctx.strokeStyle = INK;
   ctx.stroke();
-  centerText(ctx, value, cx, cy, 42, r * 1.3, "#FFFFFF");
-  return cx + r;
+  centerText(ctx, value, cx, cy, 44, r * 1.3, "#FFFFFF");
 }
 
-/** Draws a number on a heart (health is red, stamina green). Returns its right edge. */
-function drawHeart(ctx: CanvasRenderingContext2D, left: number, value: string, fill: string): number {
-  const s = 104, cx = left + s / 2, cy = BAND_Y + 4;
+/** Draws a number on a heart centered on (cx, cy): health is red, stamina green. */
+function drawHeart(ctx: CanvasRenderingContext2D, cx: number, cy: number, value: string, fill: string): void {
+  const s = 104;
   ctx.beginPath();
   ctx.moveTo(cx, cy + s * 0.42);
   ctx.bezierCurveTo(cx - s * 0.62, cy, cx - s * 0.5, cy - s * 0.62, cx, cy - s * 0.3);
@@ -360,14 +367,13 @@ function drawHeart(ctx: CanvasRenderingContext2D, left: number, value: string, f
   ctx.strokeStyle = INK;
   ctx.stroke();
   centerText(ctx, value, cx, cy - 6, 40, s * 0.55, "#FFFFFF");
-  return left + s;
 }
 
-/** Draws hand size over a two-card icon. Returns its right edge. */
-function drawHandSize(ctx: CanvasRenderingContext2D, left: number, value: string): number {
-  const w = 66, h = 88, y = BAND_Y - h / 2;
+/** Draws hand size over a two-card icon centered on (cx, cy). */
+function drawHandSize(ctx: CanvasRenderingContext2D, cx: number, cy: number, value: string): void {
+  const w = 66, h = 88;
   ctx.save();
-  ctx.translate(left + 22 + w / 2, BAND_Y);
+  ctx.translate(cx + 14, cy);
   ctx.rotate(0.18);
   roundRect(ctx, -w / 2, -h / 2, w, h, 9);
   ctx.fillStyle = "#C9CED6";
@@ -376,93 +382,112 @@ function drawHandSize(ctx: CanvasRenderingContext2D, left: number, value: string
   ctx.strokeStyle = INK;
   ctx.stroke();
   ctx.restore();
-  roundRect(ctx, left, y, w, h, 9);
+  roundRect(ctx, cx - 8 - w / 2, cy - h / 2, w, h, 9);
   ctx.fillStyle = PAPER;
   ctx.fill();
   ctx.lineWidth = 4;
   ctx.strokeStyle = INK;
   ctx.stroke();
-  centerText(ctx, value, left + w / 2, BAND_Y, 42, w - 10, INK);
-  return left + w + 30;
+  centerText(ctx, value, cx - 8, cy, 42, w - 10, INK);
 }
 
-/** Draws the large check value in the bottom-right corner. */
+/** Draws the large check value at the bottom of the right-hand column. */
 function drawCheck(ctx: CanvasRenderingContext2D, value: string): void {
-  const x = 606, y = 896, w = 100, h = 92;
+  const w = 104, h = 96, x = COLUMN_X - w / 2, y = FOOTER_TOP - h + 8;
   roundRect(ctx, x, y, w, h, 16);
   ctx.fillStyle = PAPER;
   ctx.fill();
   ctx.lineWidth = 6;
   ctx.strokeStyle = INK;
   ctx.stroke();
-  centerText(ctx, value, x + w / 2, y + h / 2, 76, w - 14, INK);
+  centerText(ctx, value, x + w / 2, y + h / 2, 78, w - 14, INK);
 }
 
-/** Draws the resource symbols centered between left and right. */
-function drawSymbols(ctx: CanvasRenderingContext2D, symbols: CardSymbol[], left: number, right: number): void {
+/** Draws the resource symbols in a row from the bottom-left corner, shrinking to fit maxWidth. */
+function drawSymbols(ctx: CanvasRenderingContext2D, symbols: CardSymbol[], maxWidth: number): void {
   if (!symbols.length) return;
-  const r = 30, gap = 10;
+  const r = 24, gap = 10;
   const total = symbols.length * r * 2 + (symbols.length - 1) * gap;
-  const scale = Math.min(1, (right - left) / total);
+  const scale = Math.min(1, maxWidth / total);
   const rr = r * scale, gg = gap * scale;
-  let x = left + (right - left - total * scale) / 2 + rr;
+  let x = 40 + rr;
+  const cy = (FOOTER_TOP + CARD_HEIGHT - EDGE) / 2;
   for (const s of symbols) {
-    drawSymbol(ctx, s.id, x, BAND_Y, rr, s.attuned);
+    drawSymbol(ctx, s.id, x, cy, rr, s.attuned);
     x += rr * 2 + gg;
   }
 }
 
-/** Draws the footer: set code, number and rarity on the left, artist on the right. */
-function drawFooter(ctx: CanvasRenderingContext2D, card: Card, setCode: string, hasCheck: boolean): void {
-  ctx.fillStyle = "rgba(255,255,255,0.78)";
+/** Draws the collector line (type, rarity, set code, number) and the artist credit, bottom right. */
+function drawFooter(ctx: CanvasRenderingContext2D, card: Card, typeName: string, setCode: string): void {
+  const right = CARD_WIDTH - 40;
+  ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  ctx.font = `600 20px ${DISPLAY}`;
-  ctx.fillText(`${setCode}  ${formatNumber(card.number)}  ${card.rarity}`.trim(), 52, 1004);
+  const collector = [typeName, card.rarity, setCode, formatNumber(card.number)].filter(Boolean).join("  ");
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  fitFont(ctx, collector, "600", 22, 14, 380);
+  ctx.fillText(collector, right, 984);
   if (card.artist.trim()) {
     const credit = "Art: " + card.artist.trim();
-    const right = hasCheck ? 590 : 698;
-    fitFont(ctx, credit, "500", 20, 14, 300);
-    ctx.textAlign = "right";
-    ctx.fillText(credit, right, 1004);
-    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    fitFont(ctx, credit, "500", 18, 12, 380);
+    ctx.fillText(credit, right, 1011);
   }
+  ctx.textAlign = "left";
 }
 
 /** Draws a full card at card-pixel size. Scale the context first to draw it smaller or larger. */
 export function drawCard(ctx: CanvasRenderingContext2D, card: Card, options: DrawOptions = {}): void {
   const typeDef = getCardType(card.type);
   const color = typeDef.color;
+  const isCharacter = card.type === "character";
   ctx.save();
   ctx.clearRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
-  drawFrame(ctx, color);
+  drawFrame(ctx);
   drawArt(ctx, card, options.artImage ?? null, color);
 
+  const check = stat(card, "check");
+  const speed = stat(card, "speed");
+  const damage = stat(card, "damage");
+  const stamina = stat(card, "stamina");
+  const handSize = stat(card, "handSize");
+  const health = stat(card, "health");
+
+  // The text box, then the name block over its top edge, then the text below the name block.
+  let textTop: number;
+  if (isCharacter) {
+    const statsBottom = health ? 700 : handSize ? 604 : 0;
+    textTop = Math.max(nameBlockBottom(card, CHARACTER_NAME_Y), statsBottom) + 12;
+    drawCharacterPanel(ctx, textTop, color);
+    drawNameBlock(ctx, card, CHARACTER_NAME_Y, COLUMN_LEFT - EDGE - 10, color);
+  } else {
+    drawTextBox(ctx, color);
+    textTop = drawNameBlock(ctx, card, FORM_NAME_Y, 560, color);
+  }
+  const hasColumn = Boolean(check) || card.type === "attack" || Boolean(stamina);
+  const textRight = hasColumn ? COLUMN_LEFT : CARD_WIDTH - 40;
+  drawEffectText(ctx, card, { x: 40, y: textTop + 14, w: textRight - 40, h: FOOTER_TOP - textTop - 30 });
+
+  // Right-hand column: attack speed and damage, backup stamina, character hand size and health.
+  if (card.type === "attack") {
+    drawSpeed(ctx, COLUMN_X - 10, 714, speed || "-", getZone(card.attackZone)?.id ?? "mid");
+    drawDamage(ctx, COLUMN_X, 810, damage || "-");
+  } else if (stamina) {
+    drawHeart(ctx, COLUMN_X, 790, stamina, GREEN);
+  } else if (isCharacter) {
+    if (handSize) drawHandSize(ctx, COLUMN_X, 560, handSize);
+    if (health) drawHeart(ctx, COLUMN_X, handSize ? 656 : 572, health, RED);
+  }
+  if (check) drawCheck(ctx, check);
+
+  // Corner stats go last so they sit on top of the art.
   const difficulty = stat(card, "difficulty");
   const blockModifier = stat(card, "blockModifier");
   const blockZone = typeShowsStat(card, "blockZone") ? card.blockZone : "none";
-  const hasShield = Boolean(blockModifier) || blockZone !== "none";
-  drawName(ctx, card, difficulty ? 164 : 44, hasShield ? 600 : 706);
   if (difficulty) drawDifficulty(ctx, difficulty);
-  if (hasShield) drawShield(ctx, blockModifier, blockZone);
-  if (card.type === "attack") drawAttackZone(ctx, getZone(card.attackZone)?.id ?? "mid");
+  if (Boolean(blockModifier) || blockZone !== "none") drawShield(ctx, blockModifier, blockZone);
 
-  drawTypeLine(ctx, card, typeDef.name, color);
-  drawTextBox(ctx, card, color);
-
-  // Bottom band: type-specific stats on the left, symbols in the middle, check value on the right.
-  let left = 44;
-  if (card.type === "attack") {
-    left = drawSpeed(ctx, left, stat(card, "speed") || "-") + 14;
-    left = drawDamage(ctx, left, stat(card, "damage") || "-") + 14;
-  } else if (card.type === "character") {
-    if (stat(card, "handSize")) left = drawHandSize(ctx, left, stat(card, "handSize")) + 10;
-    if (stat(card, "health")) left = drawHeart(ctx, left, stat(card, "health"), RED) + 14;
-  } else if (card.type === "backup") {
-    if (stat(card, "stamina")) left = drawHeart(ctx, left, stat(card, "stamina"), GREEN) + 14;
-  }
-  const check = stat(card, "check");
-  if (check) drawCheck(ctx, check);
-  drawSymbols(ctx, card.symbols, left, check ? 592 : 706);
-  drawFooter(ctx, card, options.setCode ?? "", Boolean(check));
+  drawSymbols(ctx, card.symbols, 280);
+  drawFooter(ctx, card, typeDef.name, options.setCode ?? "");
   ctx.restore();
 }

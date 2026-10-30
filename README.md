@@ -6,11 +6,12 @@ Use it at **https://dontdoubtdusty.github.io/custom-uvs/**. Nothing to install. 
 
 This is a fan-made tool. The card frame is an original design that follows the UniVersus information layout; it does not reproduce official card art or logos.
 
-## Features (v0.01)
+## Features (v0.02)
 
 - Create several sets, each with a name and a short code (printed as `MYS 001`).
 - Edit cards of every type: attack, foundation, action, asset, backup, character and token.
 - Live card preview as you type, on a cutting-mat workspace.
+- A frame laid out the way current UniVersus cards are read: name tab over the bottom of the art with a keyword strip below it, speed, damage and check stacked on the right edge of the text box, symbols bottom left, collector line bottom right. Characters are full art with hand size and health beside the name.
 - Stats in current-rules terms: difficulty, check value, block modifier and zone, speed, damage, attack zone, hand size, health, stamina and character version. A blank stat is not printed.
 - Resource symbols, including attuned symbols (printed as squares).
 - Effect text with `**bold**` and inline symbols like `{fire}`.
@@ -18,7 +19,7 @@ This is a fan-made tool. The card frame is an original design that follows the U
 - Duplicate and delete cards. Changes save automatically.
 - Works on phones and desktops, in light and dark mode. If the browser blocks storage, the app still runs and says your work will not be kept.
 
-Coming next: PNG export and JSON backup (v0.02), print sheets (v0.03), Tabletop Simulator deck sheets (v0.04).
+Coming next: ability labels, flavor text and set size (v0.03), PNG export and JSON backup (v0.04), print sheets (v0.05), Tabletop Simulator deck sheets (v0.06).
 
 ## Developing
 

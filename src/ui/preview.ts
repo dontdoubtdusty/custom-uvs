@@ -1,7 +1,7 @@
 // The live card preview on the cutting mat. Redraws when state changes and lets you drag the art.
 
 import { createCard, type Card } from "../model/card";
-import { ART_RECT, artPlacement, CARD_HEIGHT, CARD_WIDTH, drawCard } from "../render/cardRenderer";
+import { artPlacement, artRectFor, CARD_HEIGHT, CARD_WIDTH, drawCard } from "../render/cardRenderer";
 import type { AppState, StateSnapshot } from "../state/appState";
 
 /** A sample card shown before any set exists, so the first screen is not empty. */
@@ -72,7 +72,7 @@ export class Preview {
     const card = this.app.currentCard();
     if (!card || !this.app.getArtImage(card.artId)) return;
     const p = this.toCardPoint(e);
-    const a = ART_RECT;
+    const a = artRectFor(card);
     if (p.x < a.x || p.x > a.x + a.w || p.y < a.y || p.y > a.y + a.h) return;
     e.preventDefault();
     this.canvas.setPointerCapture(e.pointerId);
