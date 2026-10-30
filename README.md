@@ -14,7 +14,7 @@ This is a fan-made tool. The card frame is an original design that follows the U
 - A frame laid out the way current UniVersus cards are read: name tab over the bottom of the art with a keyword strip below it, speed, damage and check stacked on the right edge of the text box, symbols bottom left, collector line bottom right. Characters are full art with hand size and health beside the name.
 - Stats in current-rules terms: difficulty, check value, block modifier and zone, speed, damage, attack zone, hand size, health, stamina and character version. A blank stat is not printed.
 - Resource symbols, including attuned symbols (printed as squares).
-- Effect text with `**bold**` and inline symbols like `{fire}`.
+- Effect text with `**bold**`, ability labels like `[[Enhance]]` (printed as dark chips) and inline symbols like `{fire}`.
 - Upload art, then drag it on the card and zoom to frame it.
 - Duplicate and delete cards. Changes save automatically.
 - Works on phones and desktops, in light and dark mode. If the browser blocks storage, the app still runs and says your work will not be kept.

@@ -9,7 +9,8 @@ const PATHS = {
   trash: "M4 7h16 M9 7V4h6v3 M6 7l1 13h10l1-13 M10 11v6 M14 11v6",
   upload: "M12 16V4 M7 9l5-5 5 5 M4 16v4h16v-4",
   reset: "M4 12a8 8 0 1 0 2.3-5.7 M4 4v4h4",
-  bold: "M7 5h6a3.5 3.5 0 0 1 0 7H7z M7 12h7a3.5 3.5 0 0 1 0 7H7z"
+  bold: "M7 5h6a3.5 3.5 0 0 1 0 7H7z M7 12h7a3.5 3.5 0 0 1 0 7H7z",
+  label: "M3 7h13l5 5-5 5H3z M7 12h6"
 } as const;
 
 export type IconName = keyof typeof PATHS;

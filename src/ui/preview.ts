@@ -10,7 +10,7 @@ function sampleCard(): Card {
     ...createCard("sample", 1),
     name: "Ember Step",
     keywords: "Kick, Combo",
-    text: "**Enhance:** Your attack gets +1 speed.\n**Response** {fire}: After this attack is blocked, draw 1 card.",
+    text: "[[Enhance]]: Your attack gets +1 speed.\n[[Response]] {fire}: After this attack is blocked, draw 1 card.",
     symbols: [{ id: "fire", attuned: false }, { id: "chaos", attuned: false }],
     rarity: "R"
   };

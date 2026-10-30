@@ -122,11 +122,12 @@ export class Editor {
           <h2>Effect text</h2>
           <div class="text-toolbar" role="toolbar" aria-label="Effect text tools">
             <button type="button" class="tool-button" data-action="bold" title="Bold" aria-label="Bold">${icon("bold")}</button>
+            <button type="button" class="tool-button" data-action="label" title="Ability label" aria-label="Ability label">${icon("label")}</button>
             <span class="toolbar-divider" aria-hidden="true"></span>${insertButtons}
           </div>
           <label class="visually-hidden" for="f-text">Effect text</label>
-          <textarea id="f-text" class="input textarea" data-field="text" rows="6" placeholder="Enhance: Your attack gets +1 speed."></textarea>
-          <p class="hint">Wrap words in ** to make them bold. Type a symbol name in braces, like {fire}, or use the buttons above.</p>
+          <textarea id="f-text" class="input textarea" data-field="text" rows="6" placeholder="[[Enhance]]: Your attack gets +1 speed."></textarea>
+          <p class="hint">Wrap words in ** to make them bold. Wrap an ability name in double brackets, like [[Enhance]], to print it as a label. Type a symbol name in braces, like {fire}, or use the buttons above.</p>
         </section>
 
         <section class="form-section">
@@ -233,12 +234,12 @@ export class Editor {
     if (event.key === "Enter" && el.tagName === "INPUT" && el.closest('[data-form="card"]')) event.preventDefault();
   }
 
-  /** Wraps the selected effect text in ** markers, or inserts an empty pair at the caret. */
-  private applyBold(textarea: HTMLTextAreaElement): void {
+  /** Wraps the selected effect text in markers (like ** or [[ ]]), or inserts an empty pair at the caret. */
+  private wrapSelection(textarea: HTMLTextAreaElement, open: string, close: string): void {
     const { selectionStart: start, selectionEnd: end, value } = textarea;
-    textarea.value = value.slice(0, start) + "**" + value.slice(start, end) + "**" + value.slice(end);
+    textarea.value = value.slice(0, start) + open + value.slice(start, end) + close + value.slice(end);
     textarea.focus();
-    textarea.setSelectionRange(start + 2, end + 2);
+    textarea.setSelectionRange(start + open.length, end + open.length);
     this.app.updateCard({ text: textarea.value });
   }
 
@@ -259,7 +260,8 @@ export class Editor {
     const textarea = this.root.querySelector<HTMLTextAreaElement>("#f-text");
     switch (button.dataset.action) {
       case "cycle-symbol": this.app.cycleSymbol(button.dataset.symbol as SymbolId); break;
-      case "bold": if (textarea) this.applyBold(textarea); break;
+      case "bold": if (textarea) this.wrapSelection(textarea, "**", "**"); break;
+      case "label": if (textarea) this.wrapSelection(textarea, "[[", "]]"); break;
       case "insert-symbol": if (textarea) this.insertSymbol(textarea, button.dataset.symbol ?? ""); break;
       case "pick-art": this.root.querySelector<HTMLInputElement>("#f-art")?.click(); break;
       case "reset-art": this.app.updateCard({ artPanX: 0, artPanY: 0, artZoom: 1 }); break;
