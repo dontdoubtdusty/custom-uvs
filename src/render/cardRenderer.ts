@@ -298,9 +298,9 @@ function drawCharacterPanel(ctx: CanvasRenderingContext2D, top: number, color: s
   ctx.fillRect(EDGE, top - 40, CARD_WIDTH - EDGE * 2, FOOTER_TOP - top + 40);
 }
 
-/** Lays out and draws the effect text inside the given box. */
+/** Lays out and draws the effect text, then any flavor text, inside the given box. */
 function drawEffectText(ctx: CanvasRenderingContext2D, card: Card, inner: Box): void {
-  const fitted = fitRichText(ctx, card.text, inner, BODY, 32, 18);
+  const fitted = fitRichText(ctx, card.text, inner, BODY, 32, 18, card.flavor);
   drawRichText(ctx, fitted, inner, BODY, "#1C2026", (c, id, cx, cy, r) => drawSymbol(c, id, cx, cy, r));
 }
 

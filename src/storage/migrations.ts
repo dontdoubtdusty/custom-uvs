@@ -9,6 +9,21 @@ export interface Migration {
   upgrade: (db: IDBDatabase, tx: IDBTransaction) => void;
 }
 
+/**
+ * Sets a field on every record in a store that does not have it yet.
+ * Used by migrations; never change what it does, write a new helper instead.
+ */
+function backfill(tx: IDBTransaction, store: string, field: string, value: unknown): void {
+  const request = tx.objectStore(store).openCursor();
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (!cursor) return;
+    const record = cursor.value as Record<string, unknown>;
+    if (record[field] === undefined) cursor.update({ ...record, [field]: value });
+    cursor.continue();
+  };
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   // Version 1: initial stores for sets, cards (indexed by set) and art images.
   {
@@ -19,5 +34,10 @@ export const MIGRATIONS: readonly Migration[] = [
       cards.createIndex("bySet", "setId", { unique: false });
       db.createObjectStore("art", { keyPath: "id" });
     }
+  },
+  // Version 2: cards get flavor text.
+  {
+    description: "Add empty flavor text to existing cards",
+    upgrade: (_db, tx) => backfill(tx, "cards", "flavor", "")
   }
 ];

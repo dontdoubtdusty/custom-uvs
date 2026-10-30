@@ -1,6 +1,6 @@
 // Reads and writes sets, cards and art. The only place that knows the store names.
 
-import type { Card } from "../model/card";
+import { normalizeCard, type Card } from "../model/card";
 import type { CardSet } from "../model/set";
 import { newId } from "../model/ids";
 import { openStorage, type StorageBackend, type StorageMode } from "./backends";
@@ -45,7 +45,7 @@ export class Repository {
   /** Returns the cards in a set, ordered by card number. */
   async getCards(setId: string): Promise<Card[]> {
     const cards = await this.db.getAllBySet<Card>("cards", setId);
-    return cards.sort((a, b) => a.number - b.number);
+    return cards.map(normalizeCard).sort((a, b) => a.number - b.number);
   }
 
   /** Saves a card (insert or update). */

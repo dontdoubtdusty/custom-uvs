@@ -128,6 +128,9 @@ export class Editor {
           <label class="visually-hidden" for="f-text">Effect text</label>
           <textarea id="f-text" class="input textarea" data-field="text" rows="6" placeholder="[[Enhance]]: Your attack gets +1 speed."></textarea>
           <p class="hint">Wrap words in ** to make them bold. Wrap an ability name in double brackets, like [[Enhance]], to print it as a label. Type a symbol name in braces, like {fire}, or use the buttons above.</p>
+          <div class="field"><label class="field-label" for="f-flavor">Flavor text</label>
+            <textarea id="f-flavor" class="input textarea textarea-short" data-field="flavor" rows="2" placeholder="&quot;Flaming arrows?!&quot;&#10;-Who said it"></textarea></div>
+          <p class="hint">Printed in italics under the effect text. Put who said it on its own line.</p>
         </section>
 
         <section class="form-section">

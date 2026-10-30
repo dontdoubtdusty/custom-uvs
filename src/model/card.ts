@@ -21,8 +21,10 @@ export interface Card {
   type: CardTypeId;
   /** Comma separated; printed on the type line joined with dots. */
   keywords: string;
-  /** Effect text; supports **bold** and {symbol}. */
+  /** Effect text; supports **bold**, [[ability label]] and {symbol}. */
   text: string;
+  /** Flavor text, printed in italics below the effect text. Blank prints nothing. */
+  flavor: string;
   difficulty: string;
   check: string;
   blockModifier: string;
@@ -60,6 +62,7 @@ export function createCard(setId: string, number: number): Card {
     type: "attack",
     keywords: "",
     text: "",
+    flavor: "",
     difficulty: "3",
     check: "4",
     blockModifier: "2",
@@ -81,6 +84,11 @@ export function createCard(setId: string, number: number): Card {
     createdAt: now,
     updatedAt: now
   };
+}
+
+/** Fills in fields that cards saved by older versions may lack. Used when reading saved cards. */
+export function normalizeCard(card: Card): Card {
+  return { ...card, flavor: typeof card.flavor === "string" ? card.flavor : "" };
 }
 
 /** Returns a deep copy so callers can change it without touching the original. */

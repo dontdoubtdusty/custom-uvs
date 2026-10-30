@@ -277,6 +277,7 @@ h1, h2 { margin: 0; font-family: var(--font-display); font-weight: 700; line-hei
 select.input { cursor: pointer; }
 
 .textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+.textarea-short { min-height: 72px; }
 
 .range { width: 100%; accent-color: var(--accent); }
 
